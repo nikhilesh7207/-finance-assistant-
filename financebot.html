@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Finance Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+  
+  <!-- Header -->
+  <header class="text-center mb-8">
+    <h1 class="text-3xl font-bold text-blue-700">💰 Personal Finance Assistant</h1>
+    <p class="text-gray-600">Track your income & expenses easily</p>
+  </header>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="bg-green-100 p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold">Total Income</h3>
+      <p id="totalIncome" class="text-2xl font-bold text-green-700">₹0</p>
+    </div>
+    <div class="bg-red-100 p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold">Total Expense</h3>
+      <p id="totalExpense" class="text-2xl font-bold text-red-700">₹0</p>
+    </div>
+    <div class="bg-blue-100 p-4 rounded-xl shadow">
+      <h3 class="text-lg font-semibold">Balance</h3>
+      <p id="balance" class="text-2xl font-bold text-blue-700">₹0</p>
+    </div>
+  </div>
+
+  <!-- Add Transaction Form -->
+  <form id="transactionForm" class="bg-white p-6 rounded-xl shadow mb-6">
+    <div class="grid grid-cols-5 gap-4">
+      <input type="number" id="amount" placeholder="Amount" class="border p-2 rounded" required>
+      <input type="text" id="category" placeholder="Category" class="border p-2 rounded" required>
+      <select id="type" class="border p-2 rounded" required>
+        <option value="expense">Expense</option>
+        <option value="income">Income</option>
+      </select>
+      <input type="text" id="note" placeholder="Note" class="border p-2 rounded">
+      <input type="date" id="date" class="border p-2 rounded" required>
+    </div>
+    <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 mt-4 rounded">Add Transaction</button>
+  </form>
+
+  <!-- Transactions Table -->
+  <div class="bg-white p-6 rounded-xl shadow mb-6">
+    <h2 class="text-lg font-bold mb-4">Recent Transactions</h2>
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="p-2">Date</th>
+          <th class="p-2">Category</th>
+          <th class="p-2">Type</th>
+          <th class="p-2">Amount</th>
+          <th class="p-2">Note</th>
+        </tr>
+      </thead>
+      <tbody id="transactionsTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-xl shadow">
+      <h2 class="text-lg font-bold mb-4">Spending by Category</h2>
+      <canvas id="categoryChart"></canvas>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow">
+      <h2 class="text-lg font-bold mb-4">Balance Over Time</h2>
+      <canvas id="balanceChart"></canvas>
+    </div>
+  </div>
+
+<script>
+  const transactions = [];
+
+  const totalIncomeEl = document.getElementById("totalIncome");
+  const totalExpenseEl = document.getElementById("totalExpense");
+  const balanceEl = document.getElementById("balance");
+  const transactionsTable = document.getElementById("transactionsTable");
+
+  const categoryChart = new Chart(document.getElementById("categoryChart"), {
+    type: 'pie',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#4ade80', '#f87171', '#60a5fa', '#facc15', '#a78bfa'] }] }
+  });
+
+  const balanceChart = new Chart(document.getElementById("balanceChart"), {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'Balance', data: [], borderColor: '#3b82f6', fill: false }] }
+  });
+
+  function updateUI() {
+    let totalIncome = 0, totalExpense = 0;
+    const categoryTotals = {};
+    const balanceOverTime = [];
+    let balance = 0;
+
+    transactionsTable.innerHTML = "";
+    transactions.forEach(tx => {
+      if (tx.type === "income") totalIncome += tx.amount;
+      else totalExpense += tx.amount;
+
+      categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
+
+      balance += (tx.type === "income" ? tx.amount : -tx.amount);
+      balanceOverTime.push(balance);
+
+      transactionsTable.innerHTML += `
+        <tr>
+          <td class="p-2">${tx.date}</td>
+          <td class="p-2">${tx.category}</td>
+          <td class="p-2">${tx.type}</td>
+          <td class="p-2">₹${tx.amount}</td>
+          <td class="p-2">${tx.note}</td>
+        </tr>`;
+    });
+
+    totalIncomeEl.textContent = `₹${totalIncome}`;
+    totalExpenseEl.textContent = `₹${totalExpense}`;
+    balanceEl.textContent = `₹${totalIncome - totalExpense}`;
+
+    categoryChart.data.labels = Object.keys(categoryTotals);
+    categoryChart.data.datasets[0].data = Object.values(categoryTotals);
+    categoryChart.update();
+
+    balanceChart.data.labels = transactions.map(tx => tx.date);
+    balanceChart.data.datasets[0].data = balanceOverTime;
+    balanceChart.update();
+  }
+
+  document.getElementById("transactionForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const amount = parseFloat(document.getElementById("amount").value);
+    const category = document.getElementById("category").value;
+    const type = document.getElementById("type").value;
+    const note = document.getElementById("note").value;
+    const date = document.getElementById("date").value;
+
+    transactions.push({ amount, category, type, note, date });
+    updateUI();
+    e.target.reset();
+  });
+</script>
+
+</body>
+</html>
+
